@@ -57,74 +57,86 @@ export const updateStatusById = async (
 };
 
 export const getSalesSummary = async (startDate: Date) => {
-  const result = await Order.aggregate([
+  const matchStage = { createdAt: { $gte: startDate } };
+
+  const dailyStats = await Order.aggregate([
+    { $match: matchStage },
     {
-      $match: {
-        createdAt: { $gte: startDate },
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        revenue: { $sum: "$totalAmount" },
+        orderCount: { $sum: 1 },
       },
     },
     {
-      $facet: {
-        dailyStats: [
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-              },
-              revenue: { $sum: "$totalAmount" },
-              orderCount: { $sum: 1 },
-            },
-          },
-          { $project: { _id: 0, date: "$_id", revenue: 1, orderCount: 1 } },
-          { $sort: { date: 1 } },
-        ],
+      $project: {
+        _id: 0,
+        date: "$_id",
+        revenue: 1,
+        orderCount: 1,
+      },
+    },
+    { $sort: { date: 1 } },
+  ]);
 
-        topProducts: [
-          { $unwind: "$items" },
-          {
-            $group: {
-              _id: "$items.productName",
-              totalQtySold: { $sum: "$items.qty" },
-              totalRevenue: {
-                $sum: { $multiply: ["$items.qty", "$items.price"] },
-              },
-            },
-          },
-          { $sort: { totalQtySold: -1 } },
-          { $limit: 5 },
-          {
-            $project: {
-              _id: 0,
-              productName: "$_id",
-              totalQtySold: 1,
-              totalRevenue: 1,
-            },
-          },
-        ],
+  const topProducts = await Order.aggregate([
+    { $match: matchStage },
+    { $unwind: "$items" },
+    {
+      $group: {
+        _id: "$items.productName",
+        totalQtySold: { $sum: "$items.qty" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        productName: "$_id",
+        totalQtySold: 1,
+      },
+    },
+    { $sort: { totalQtySold: -1 } },
+    { $limit: 5 },
+  ]);
 
-        avgOrderValue: [
-          {
-            $group: {
-              _id: null,
-              avgOrderValue: { $avg: "$totalAmount" },
-            },
-          },
-          { $project: { _id: 0, avgOrderValue: 1 } },
-        ],
-
-        statusCounts: [
-          {
-            $group: {
-              _id: "$status",
-              count: { $sum: 1 },
-            },
-          },
-          { $project: { _id: 0, status: "$_id", count: 1 } },
-          { $sort: { status: 1 } },
-        ],
+  const avgOrderValueResult = await Order.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: null,
+        avgOrderValue: { $avg: "$totalAmount" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        avgOrderValue: 1,
       },
     },
   ]);
 
-  return result[0];
+  const statusCounts = await Order.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        status: "$_id",
+        count: 1,
+      },
+    },
+    { $sort: { status: 1 } },
+  ]);
+
+  return {
+    dailyStats,
+    topProducts,
+    avgOrderValue: avgOrderValueResult[0]?.avgOrderValue || 0,
+    statusCounts,
+  };
 };

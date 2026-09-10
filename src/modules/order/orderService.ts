@@ -61,15 +61,35 @@ export const updateOrderStatus = async (
         throw new Error(`Error updating order status: ${error.message}`);
     }
 };
+const parseRange = (range: string): Date => {
+  const match = /^(\d+)([dh])$/.exec(range);
+  const now = new Date();
 
+  if (!match) {
+    now.setDate(now.getDate() - 7);
+    return now;
+  }
+
+    const value = parseInt(match[1]!, 10);
+  const unit = match[2];
+
+  if (unit === "d") {
+    now.setDate(now.getDate() - value);
+  } else if (unit === "h") {
+    now.setHours(now.getHours() - value);
+  }
+
+  return now;
+};
 export const getSalesSummary = async (range: string) => {
-    try {
-        logger.info(`Fetching sales summary for range ${range}`);
+  try {
+    logger.info(`Fetching sales summary for range ${range}`);
 
-        const summary = await orderRepository.getSalesSummary(new Date(range));
+    const startDate = parseRange(range);
+    const summary = await orderRepository.getSalesSummary(startDate);
 
-        return summary;
-    } catch (error: any) {
-        throw new Error(`Error fetching sales summary: ${error.message}`);
-    }
+    return summary;
+  } catch (error: any) {
+    throw new Error(`Error fetching sales summary: ${error.message}`);
+  }
 };
