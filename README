@@ -1,0 +1,30 @@
+### Pipeline Design & Justification
+
+**Approach: 4 separate aggregation queries, instead of 1 combined `$facet` query.**
+
+I had two options:
+
+1. Use `$facet` to run all 4 metrics in a single aggregation call.
+2. Run 4 separate `Order.aggregate()` calls, one for each metric.
+
+I went with **4 separate queries** because:
+
+- **Easier to read** — each query is short and does one thing. A `$facet` version puts all 4 pipelines inside one big nested object, which gets messy and hard to follow.
+- **Easier to test** — each query can be copy-pasted into `mongosh` and run on its own to check if it's correct.
+- **Safer** — if one query has a bug, it doesn't break the other three. With `$facet`, one failing stage can fail the whole thing.
+- **Performance difference is small** — yes, `$facet` saves extra database calls, but for an analytics dashboard endpoint (not something hit thousands of times a second), 4 quick indexed queries are fast enough. The extra clarity is worth it.
+
+### How Each Metric Is Grouped
+
+- **`dailyStats`** — Groups orders by day (using `createdAt`) and sums up revenue and order count per day. Sorted oldest to newest.
+- **`topProducts`** — Since each order can have multiple items, it first breaks the `items` array into individual entries, then groups by `productName` and adds up quantity sold. Sorted highest to lowest, top 5 only.
+- **`avgOrderValue`** — Simple average of `totalAmount` across all orders in the selected range.
+- **`statusCounts`** — Counts how many orders fall into each status (`pending`, `processing`, `shipped`, `delivered`).
+
+### Date Filtering
+
+All 4 queries use the same date filter (`createdAt >= startDate`), based on the `range` param (e.g. `7d` = last 7 days). This keeps all the numbers consistent — they're all looking at the same time window.
+
+### Indexing
+
+The `Order` model has indexes on `status`, `createdAt`, and `userId`, so filtering by date is fast even as the data grows.
