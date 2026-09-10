@@ -1,32 +1,24 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { HttpStatusCode } from "../../constants/httpStatusCode";
 import { message } from "../../constants/responseMessage";
 import logger from "../../utils/logger";
 import * as orderService from "./orderService";
-import { validationResult } from "express-validator";
 
 
-export const validateRequest = (req: Request, res: Response, next: NextFunction) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({ errors: errors.array() });
-    }
-    next();
-};
 
 
 export const createOrder = async (req: Request, res: Response) => {
-  try {
-    const order = await orderService.createOrder(req.body);
+    try {
+        const order = await orderService.createOrder(req.body);
 
-    return res.status(HttpStatusCode.CREATED).json({
-      message: message.ORDER_CREATED,
-      data: order,
-    });
-  } catch (error: any) {
-    logger.error("Error in createOrder controller:", error);
-    return res.status(HttpStatusCode.BAD_REQUEST).json({ message: error.message });
-  }
+        return res.status(HttpStatusCode.CREATED).json({
+            message: message.ORDER_CREATED,
+            data: order,
+        });
+    } catch (error: any) {
+        logger.error("Error in createOrder controller:", error);
+        return res.status(HttpStatusCode.BAD_REQUEST).json({ message: error.message });
+    }
 };
 
 export const getOrders = async (req: Request, res: Response) => {
