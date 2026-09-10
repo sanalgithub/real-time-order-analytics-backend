@@ -3,6 +3,7 @@ import * as orderRepository from "./orderRepository";
 import { OrderDocument } from "../../models/order";
 import logger from "../../utils/logger";
 import { paginate } from "../../utils/paginate";
+import { getIO } from "../../config/socket";
 
 export const createOrder = async (
     orderData: Partial<OrderDocument>,
@@ -11,6 +12,8 @@ export const createOrder = async (
         logger.info("Creating a new order", { orderData });
 
         const newOrder = await orderRepository.create(orderData);
+
+        getIO().to("admins").emit("orderCreated", newOrder);
 
         return newOrder;
     } catch (error: any) {
@@ -55,6 +58,8 @@ export const updateOrderStatus = async (
         if (!updatedOrder) {
             throw new Error(`Order with ID ${id} not found`);
         }
+
+        getIO().to("admins").emit("orderStatusUpdated", updatedOrder);
 
         return updatedOrder;
     } catch (error: any) {

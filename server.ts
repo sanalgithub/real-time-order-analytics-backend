@@ -1,8 +1,15 @@
+import http from "http";
 import app from "./app";
+import { initSocket, startLiveOrderCountBroadcast } from "./src/config/socket";
 
 const PORT = process.env.PORT;
 
-app
+const server = http.createServer(app);
+
+initSocket(server);
+startLiveOrderCountBroadcast();
+
+server
   .listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   })
