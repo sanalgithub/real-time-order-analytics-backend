@@ -11,6 +11,8 @@ export interface OrderItem {
 
 export interface Order {
   _id: Types.ObjectId;
+  userId: string;
+
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
@@ -21,6 +23,10 @@ export type OrderDocument = Order & Document;
 
 const OrderSchema: Schema<OrderDocument> = new Schema({
 
+  userId: {
+    type: String,
+    required: true,
+  },
   items: [
     {
       productName: { type: String, required: true },
