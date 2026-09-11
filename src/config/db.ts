@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import config from "./dbConnfig";
+import config from "./dbConfig";
 
 const { mongoURI, dbName } = config;
 

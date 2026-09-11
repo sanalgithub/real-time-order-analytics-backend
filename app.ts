@@ -16,11 +16,6 @@ app.get("/", (req: Request, res: Response) => {
 });
 app.use("/api/orders", orderRoutes);
 
-const startApp = async () => {
-  await connectDB();
-};
-
-startApp();
 
 
 
